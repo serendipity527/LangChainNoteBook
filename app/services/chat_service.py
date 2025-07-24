@@ -136,6 +136,30 @@ class ChatService:
             chat_id=request.chat_id,        # 会话标识符
             memory_type=request.memory_type  # 记忆类型
         )
+    def chat_with_tool(self, request: ChatRequest, model_key: str = "qwen3:0.6b") -> ChatResponse:
+        """
+        执行带工具的对话
+
+        使用工具链处理用户请求，AI可以根据需要调用外部工具
+        来获取更多信息或执行特定任务。
+
+        Args:
+            request (ChatRequest): 用户的聊天请求
+            model_key (str): 使用的模型标识符，默认为"qwen3:0.6b"
+
+        Returns:
+            ChatResponse: AI的回复响应，包含tool_calls字段
+"""
+        # 获取工具链实例
+        chain = ChainFactory.create_chain("tool")
+        # 委托给链处理请求
+        response = chain.invoke(request, model_key)
+        return ChatResponse(
+            chat_id=request.chat_id,
+            response=response,        # AI生成的回复内容
+            model_used=model_key,     # 实际使用的模型
+            has_memory=False,         # 明确标识为无记忆模式
+        )
 
     def get_chat_history(self, chat_id: str, memory_type: str = "buffer") -> List[Dict[str, str]]:
         """

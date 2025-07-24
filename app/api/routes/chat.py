@@ -21,6 +21,7 @@ API端点说明：
 from fastapi import APIRouter, Query, HTTPException
 from app.models.chat_models import ChatRequest, ChatResponse, ModelListResponse
 from app.services.chat_service import ChatService
+from app.services.test_service import TestService
 
 # 创建聊天相关的路由器
 # prefix="/chat" 表示所有路由都以/chat开头
@@ -30,7 +31,7 @@ router = APIRouter(prefix="/chat", tags=["聊天"])
 # 创建聊天服务实例
 # 在模块级别创建单例，所有请求共享同一个服务实例
 chat_service = ChatService()
-
+test_service = TestService()
 
 @router.post("/once", response_model=ChatResponse)
 async def chat_once(chat_request: ChatRequest):
@@ -163,7 +164,6 @@ async def chat_with_memory(chat_request: ChatRequest):
         model_key=chat_request.model_key or "qwen3:0.6b"  # 使用指定模型或默认模型
     )
 
-
 @router.get("/history/{chat_id}", response_model=dict)
 async def get_chat_history(
     chat_id: str,
@@ -258,3 +258,7 @@ async def clear_chat_memory(
         "success": success,
         "message": f"已清除会话 {chat_id} 的 {memory_type} 记忆" if success else "记忆清除失败"
     }
+
+@router.post("/tool", response_model=ChatResponse)
+def chat_with_tool(chat_request: ChatRequest):
+    return test_service.test_tool(chat_request)

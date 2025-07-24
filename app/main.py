@@ -20,6 +20,7 @@ FastAPI主应用模块
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes.chat import router as chat_router
+from api.routes.test import router as test_router
 
 # 创建FastAPI应用实例
 # title: 应用标题，显示在自动生成的API文档中
@@ -45,25 +46,12 @@ app.add_middleware(
 # 注册聊天相关的路由
 # chat_router包含所有/chat前缀的API端点
 app.include_router(chat_router)
+app.include_router(test_router)
 
 
 @app.get("/")
 async def root():
-    """
-    根路径端点
 
-    提供应用的基本信息和运行状态。
-    通常用于快速检查应用是否正常启动。
-
-    Returns:
-        dict: 包含欢迎消息和运行状态的字典
-
-    示例响应：
-        {
-            "message": "Hello World",
-            "status": "运行中"
-        }
-    """
     return {
         "message": "Hello World",
         "status": "运行中",
@@ -74,20 +62,7 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """
-    健康检查端点
 
-    用于监控系统检查应用的健康状态。
-    在容器化部署或负载均衡环境中特别有用。
-
-    Returns:
-        dict: 包含健康状态的字典
-
-    示例响应：
-        {
-            "status": "healthy"
-        }
-    """
     return {
         "status": "healthy",
         "timestamp": "2024-01-01T00:00:00Z",  # 可以添加时间戳

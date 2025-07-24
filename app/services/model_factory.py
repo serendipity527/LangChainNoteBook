@@ -14,95 +14,61 @@
 - 策略模式：根据不同提供商使用不同的创建策略
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 from langchain_ollama import ChatOllama
+from langchain_core.tools import BaseTool
 from ..config.model_config import MODEL_CONFIGS, ModelProvider, ModelConfig
+from ..tools.tool_manager import tool_manager
 
 
 class ModelFactory:
-    """
-    模型工厂类
-
-    使用工厂设计模式统一管理AI模型的创建过程。
-    根据模型配置自动选择合适的模型提供商和参数，
-    为上层应用提供统一的模型创建接口。
-
-    特点：
-    - 静态方法设计，无需实例化
-    - 支持多种模型提供商扩展
-    - 自动参数配置和验证
-    - 统一的错误处理机制
-    """
+    """模型工厂类 - 支持工具绑定"""
 
     @staticmethod
-    def create_model(model_key: str) -> Any:
-        """
-        根据模型键创建模型实例
-
-        这是工厂类的核心方法，根据提供的模型键从配置中查找对应的模型配置，
-        然后根据配置的提供商类型创建相应的模型实例。
-
-        Args:
-            model_key (str): 模型的唯一标识符，必须在MODEL_CONFIGS中存在
-
-        Returns:
-            Any: 创建的模型实例，具体类型取决于提供商
-                 - Ollama: 返回ChatOllama实例
-                 - 其他提供商: 返回对应的模型实例
-
-        Raises:
-            ValueError: 当模型键不存在或提供商不支持时抛出
-
-        Example:
-            >>> model = ModelFactory.create_model("qwen3:0.6b")
-            >>> response = await model.ainvoke("你好")
-        """
-        # 验证模型键是否存在于配置中
+    def create_model(model_key: str, tools: Optional[List[BaseTool]] = None) -> Any:
+        """创建模型实例，支持工具绑定"""
         if model_key not in MODEL_CONFIGS:
             raise ValueError(f"未知的模型: {model_key}。可用模型: {list(MODEL_CONFIGS.keys())}")
 
-        # 获取模型配置
         config = MODEL_CONFIGS[model_key]
 
-        # 根据提供商类型创建对应的模型实例
         if config.provider == ModelProvider.OLLAMA:
-            """
-            创建Ollama模型实例
-
-            Ollama是本地部署的开源模型服务，支持多种开源大语言模型。
-            ChatOllama是LangChain提供的Ollama集成类。
-            """
-            return ChatOllama(
-                base_url=config.base_url,      # Ollama服务地址
-                model=config.model_id,         # 模型标识符
-                temperature=config.temperature  # 生成温度参数
+            model = ChatOllama(
+                base_url=config.base_url,
+                model=config.model_id,
+                temperature=config.temperature
             )
-
-        # TODO: 扩展其他模型提供商
-        # elif config.provider == ModelProvider.OPENAI:
-        #     from langchain_openai import ChatOpenAI
-        #     return ChatOpenAI(
-        #         api_key=config.api_key,
-        #         model=config.model_id,
-        #         temperature=config.temperature,
-        #         max_tokens=config.max_tokens
-        #     )
-
-        # elif config.provider == ModelProvider.ANTHROPIC:
-        #     from langchain_anthropic import ChatAnthropic
-        #     return ChatAnthropic(
-        #         api_key=config.api_key,
-        #         model=config.model_id,
-        #         temperature=config.temperature
-        #     )
-
+            
+            # 如果提供了工具，则绑定到模型
+            if tools:
+                model = model.bind_tools(tools)
+            
+            return model
         else:
-            # 不支持的提供商类型
             supported_providers = [provider.value for provider in ModelProvider]
             raise ValueError(
                 f"不支持的模型提供商: {config.provider}。"
                 f"支持的提供商: {supported_providers}"
             )
+
+    @staticmethod
+    def create_model_with_tools(model_key: str, tool_names: List[str]) -> Any:
+        """创建带指定工具的模型实例"""
+        tools = []
+        for tool_name in tool_names:
+            try:
+                tool = tool_manager.get_tool(tool_name)
+                tools.append(tool)
+            except ValueError as e:
+                raise ValueError(f"工具加载失败: {e}")
+        
+        return ModelFactory.create_model(model_key, tools)
+
+    @staticmethod
+    def create_model_with_all_tools(model_key: str) -> Any:
+        """创建带所有可用工具的模型实例"""
+        tools = tool_manager.get_all_tools()
+        return ModelFactory.create_model(model_key, tools)
 
     @staticmethod
     def get_available_models() -> Dict[str, ModelConfig]:

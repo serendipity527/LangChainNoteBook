@@ -20,6 +20,7 @@ from typing import Dict, Type, List
 from .base_chain import BaseChain
 from .memory_chain import MemoryChain
 from .stateless_chain import StatelessChain
+from .tool_chain import ToolChain
 
 
 class ChainFactory:
@@ -45,9 +46,9 @@ class ChainFactory:
     # 链类型注册表：映射链类型名称到具体的链类
     _chains: Dict[str, Type[BaseChain]] = {
         "memory": MemoryChain,        # 带记忆的对话链
-        "stateless": StatelessChain   # 无记忆的对话链
+        "stateless": StatelessChain,   # 无记忆的对话链
         # 未来可以扩展更多链类型：
-        # "tool": ToolChain,          # 支持工具调用的链
+        "tool": ToolChain          # 支持工具调用的链
         # "rag": RAGChain,            # 检索增强生成链
         # "agent": AgentChain,        # 智能代理链
     }
